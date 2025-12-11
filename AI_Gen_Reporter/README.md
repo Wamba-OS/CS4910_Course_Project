@@ -2,6 +2,11 @@
 
 AI-Powered Security Assessment Tool that transforms raw penetration testing scan results into professional security reports using Claude AI.
 
+## Authors
+
+- Nathanael Jense
+- Caleb Chang
+
 ## Overview
 
 This tool takes scan results from penetration testing tools (Nmap, Nikto, SQLMap, etc.) and generates comprehensive security assessment reports with:

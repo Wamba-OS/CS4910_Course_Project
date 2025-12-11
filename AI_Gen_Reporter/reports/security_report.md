@@ -1,269 +1,216 @@
 # Security Assessment Report
-**Target:** 192.168.1.100  
-**Assessment Date:** [Current Date]  
-**Assessed By:** Penetration Testing Team  
+
+## Target Information
+- **Primary Target:** 172.22.65.70 (Private Network Range)
+- **Secondary Targets:** 192.168.1.100 (Reference Data)
+- **Assessment Date:** December 10, 2025
+- **Assessment Type:** Network Security Penetration Test
 
 ---
 
 ## 1. EXECUTIVE SUMMARY
 
 ### Security Posture Overview
-The target system at 192.168.1.100 presents a **CRITICAL** security risk with multiple high-severity vulnerabilities that could lead to complete system compromise. The assessment identified significant weaknesses in the web application, server configuration, and security hardening practices.
+The assessment reveals a **MEDIUM RISK** security posture with significant concerns primarily affecting the secondary target system. The primary target (172.22.65.70) appears to be offline or heavily firewalled, while the reference systems demonstrate critical vulnerabilities that require immediate attention.
 
-### Vulnerability Summary
-- **Total Vulnerabilities Found:** 7
-- **Overall Risk Rating:** CRITICAL
-- **Critical Vulnerabilities:** 1
-- **High Vulnerabilities:** 3  
-- **Medium Vulnerabilities:** 2
-- **Low Vulnerabilities:** 1
+### Key Findings Summary
+- **Total Vulnerabilities Identified:** 8
+- **Critical:** 1 (SQL Injection)
+- **High:** 2 (Outdated Software, Missing Security Headers)
+- **Medium:** 3 (Information Disclosure, Directory Indexing, Service Enumeration)
+- **Low:** 2 (Version Disclosure, Configuration Issues)
 
-### Key Findings
-The most concerning finding is a SQL injection vulnerability that allows complete database access. Combined with an exposed MySQL service and outdated software components, an attacker could achieve full system compromise.
+### Overall Risk Rating: **MEDIUM-HIGH**
 
 ---
 
 ## 2. VULNERABILITY SUMMARY
 
-| Severity | Vulnerability | Affected Component | CVE |
-|----------|---------------|-------------------|-----|
-| **Critical** | SQL Injection (Boolean-based blind) | login.php | N/A |
-| **High** | Exposed MySQL Service | Port 3306 | N/A |
-| **High** | Outdated Apache Version | Apache 2.4.6 | CVE-2017-15710, CVE-2017-15715 |
-| **High** | Directory Indexing Enabled | /backup/ directory | N/A |
-| **Medium** | Missing Security Headers | Web Application | N/A |
-| **Medium** | Information Disclosure via ETags | Apache Server | N/A |
-| **Low** | SSH Service Exposed | Port 22 | N/A |
+### Critical Severity (1)
+| Vulnerability | Affected System | CVE/Reference |
+|---------------|----------------|---------------|
+| SQL Injection (Boolean-based blind) | 192.168.1.100/login.php | CWE-89 |
+
+### High Severity (2)
+| Vulnerability | Affected System | CVE/Reference |
+|---------------|----------------|---------------|
+| Outdated Apache Server | 192.168.1.100 | CVE-2021-44790 (potential) |
+| Missing Critical Security Headers | 192.168.1.100 | OWASP-A6 |
+
+### Medium Severity (3)
+| Vulnerability | Affected System | CVE/Reference |
+|---------------|----------------|---------------|
+| Directory Indexing Enabled | 192.168.1.100/backup/ | CWE-548 |
+| Information Disclosure via ETags | 192.168.1.100 | CWE-200 |
+| Multiple Open Services | 192.168.1.100 | N/A |
+
+### Low Severity (2)
+| Vulnerability | Affected System | CVE/Reference |
+|---------------|----------------|---------------|
+| Server Version Disclosure | 192.168.1.100 | CWE-200 |
+| MySQL Service Externally Accessible | 192.168.1.100:3306 | N/A |
 
 ---
 
 ## 3. DETAILED FINDINGS
 
-### 🔴 CRITICAL - SQL Injection Vulnerability
+### **CRITICAL - SQL Injection Vulnerability**
+- **Affected Component:** Web application login form (/login.php)
+- **Severity:** Critical
+- **Description:** Boolean-based blind SQL injection vulnerability in the username parameter
+- **Proof of Concept:** 
+  ```
+  Parameter: username (POST)
+  Payload: username=admin' AND 1=1-- -&password=test
+  Database: webapp_db (MySQL 5.7.33)
+  ```
+- **Business Impact:** Complete database compromise, potential data exfiltration, unauthorized access to sensitive information
 
-**Description:** A boolean-based blind SQL injection vulnerability exists in the username parameter of the login form.
+### **HIGH - Outdated Apache Web Server**
+- **Affected Component:** Apache HTTP Server 2.4.6
+- **Severity:** High
+- **Description:** Apache version 2.4.6 is significantly outdated (current stable: 2.4.58)
+- **Evidence:** Nikto scan results and service enumeration
+- **Business Impact:** Exposure to known vulnerabilities, potential remote code execution
 
-**Affected Component:** `/login.php` - username parameter (POST method)
+### **HIGH - Missing Security Headers**
+- **Affected Component:** Web server configuration
+- **Severity:** High
+- **Description:** Critical security headers missing: X-Frame-Options, X-Content-Type-Options
+- **Evidence:** Nikto scan results
+- **Business Impact:** Susceptible to clickjacking attacks, MIME-type confusion attacks
 
-**Severity Rating:** Critical - Allows complete database compromise
+### **MEDIUM - Directory Indexing Enabled**
+- **Affected Component:** /backup/ directory
+- **Severity:** Medium
+- **Description:** Directory listing is enabled, potentially exposing sensitive backup files
+- **Evidence:** Nikto scan findings
+- **Business Impact:** Information disclosure, potential access to backup files containing sensitive data
 
-**Proof of Concept:**
-```
-Parameter: username (POST)
-Payload: username=admin' AND 1=1-- -&password=test
-Database: webapp_db (MySQL 5.7.33)
-```
+### **MEDIUM - Information Disclosure via ETags**
+- **Affected Component:** Apache web server
+- **Severity:** Medium
+- **Description:** Server leaks inode information through ETag headers
+- **Evidence:** Nikto scan results
+- **Business Impact:** Information gathering for attackers, system fingerprinting
 
-**Business Impact:**
-- Complete database compromise and data exfiltration
-- Potential privilege escalation to system level
-- Loss of data confidentiality, integrity, and availability
-- Regulatory compliance violations (GDPR, PCI-DSS)
-- Reputation damage and financial losses
-
----
-
-### 🟠 HIGH - Exposed MySQL Database Service
-
-**Description:** MySQL database service is directly accessible from the network on port 3306.
-
-**Affected Component:** MySQL 5.7.33 service
-
-**Severity Rating:** High - Direct database access risk
-
-**Evidence:** Port 3306/tcp open mysql MySQL 5.7.33
-
-**Business Impact:**
-- Direct database attacks and brute force attempts
-- Potential data breach if weak credentials exist
-- Bypass of application-layer security controls
-
----
-
-### 🟠 HIGH - Outdated Apache Web Server
-
-**Description:** Apache web server version 2.4.6 contains multiple known security vulnerabilities.
-
-**Affected Component:** Apache HTTP Server 2.4.6
-
-**Severity Rating:** High - Known exploitable vulnerabilities
-
-**Evidence:** Multiple CVEs including CVE-2017-15710, CVE-2017-15715
-
-**Business Impact:**
-- Remote code execution potential
-- Server compromise and lateral movement
-- Service disruption and data theft
-
----
-
-### 🟠 HIGH - Directory Indexing Enabled
-
-**Description:** Directory listing is enabled on the `/backup/` directory, potentially exposing sensitive files.
-
-**Affected Component:** `/backup/` directory
-
-**Severity Rating:** High - Information disclosure
-
-**Evidence:** Directory indexing enabled on /backup/
-
-**Business Impact:**
-- Exposure of sensitive backup files
-- Information gathering for further attacks
-- Potential access to configuration files and credentials
-
----
-
-### 🟡 MEDIUM - Missing Security Headers
-
-**Description:** Critical security headers are missing, leaving the application vulnerable to various client-side attacks.
-
-**Affected Component:** Web application responses
-
-**Severity Rating:** Medium - Client-side attack vectors
-
-**Evidence:** Missing X-Frame-Options, X-Content-Type-Options headers
-
-**Business Impact:**
-- Clickjacking attacks
-- MIME type confusion attacks
-- Cross-site scripting (XSS) exploitation
-
----
-
-### 🟡 MEDIUM - Information Disclosure via ETags
-
-**Description:** Server leaks inode information through ETag headers.
-
-**Affected Component:** Apache web server
-
-**Severity Rating:** Medium - Information disclosure
-
-**Evidence:** Server leaks inodes via ETags
-
-**Business Impact:**
-- Information gathering for targeted attacks
-- Server fingerprinting and reconnaissance
-
----
-
-### 🟢 LOW - SSH Service Exposure
-
-**Description:** SSH service is accessible from the network, presenting a potential attack vector.
-
-**Affected Component:** OpenSSH 7.4 on port 22
-
-**Severity Rating:** Low - Standard service exposure
-
-**Evidence:** 22/tcp open ssh OpenSSH 7.4
-
-**Business Impact:**
-- Brute force attack potential
-- Credential stuffing attacks
+### **LOW - Service Enumeration**
+- **Affected Component:** Multiple services (SSH, HTTP, HTTPS, MySQL)
+- **Severity:** Low
+- **Description:** Multiple services exposed and easily enumerable
+- **Evidence:** Nmap scan results showing ports 22, 80, 443, 3306
+- **Business Impact:** Increased attack surface, service fingerprinting
 
 ---
 
 ## 4. REMEDIATION RECOMMENDATIONS
 
-### Priority 1 - IMMEDIATE ACTION REQUIRED
+### Immediate Actions (Critical/High Priority)
 
-#### Critical: SQL Injection Vulnerability
+#### 1. **SQL Injection Remediation** ⚠️ URGENT
 - **Action:** Implement parameterized queries/prepared statements
 - **Effort:** Medium
-- **Timeline:** 24-48 hours
-- **Prevention:** 
-  - Input validation and sanitization
-  - Web Application Firewall (WAF) implementation
-  - Regular security code reviews
+- **Steps:**
+  ```sql
+  -- Replace direct SQL concatenation with prepared statements
+  $stmt = $pdo->prepare("SELECT * FROM users WHERE username = ? AND password = ?");
+  $stmt->execute([$username, $password]);
+  ```
+- **Timeline:** 1-2 days
 
-#### High: Disable MySQL External Access
-- **Action:** Configure MySQL to bind only to localhost (127.0.0.1)
-- **Effort:** Low
-- **Timeline:** Immediate
-- **Prevention:** Network segmentation and firewall rules
-
-### Priority 2 - SHORT TERM (1-2 weeks)
-
-#### High: Update Apache Web Server
-- **Action:** Update to latest stable Apache version (2.4.54+)
+#### 2. **Apache Server Update** 🔥 HIGH PRIORITY
+- **Action:** Upgrade Apache to latest stable version (2.4.58+)
 - **Effort:** Medium
+- **Steps:**
+  - Schedule maintenance window
+  - Backup current configuration
+  - Update Apache packages
+  - Test functionality post-update
 - **Timeline:** 1 week
-- **Prevention:** Implement automated patch management
 
-#### High: Disable Directory Indexing
-- **Action:** Add `Options -Indexes` directive to Apache configuration
+#### 3. **Implement Security Headers** 🔒 HIGH PRIORITY
+- **Action:** Configure security headers in Apache
 - **Effort:** Low
-- **Timeline:** Immediate
-- **Prevention:** Secure Apache configuration baseline
-
-### Priority 3 - MEDIUM TERM (2-4 weeks)
-
-#### Medium: Implement Security Headers
-- **Action:** Configure security headers in web server/application
-- **Effort:** Low
-- **Timeline:** 1 week
-- **Headers to implement:**
+- **Configuration:**
+  ```apache
+  Header always set X-Frame-Options DENY
+  Header always set X-Content-Type-Options nosniff
+  Header always set X-XSS-Protection "1; mode=block"
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
   ```
-  X-Frame-Options: DENY
-  X-Content-Type-Options: nosniff
-  X-XSS-Protection: 1; mode=block
-  Strict-Transport-Security: max-age=31536000
-  ```
+- **Timeline:** 2-3 days
 
-#### Medium: Fix ETag Information Disclosure
-- **Action:** Configure Apache to use non-inode based ETags
+### Medium Term Actions
+
+#### 4. **Disable Directory Indexing**
+- **Action:** Disable directory listings
 - **Effort:** Low
-- **Timeline:** 1 week
-- **Configuration:** `FileETag MTime Size`
+- **Configuration:** Add `Options -Indexes` to Apache configuration
+- **Timeline:** 1 day
 
-### Priority 4 - LONG TERM
-
-#### Low: Secure SSH Access
-- **Action:** Implement SSH hardening measures
+#### 5. **Configure ETag Headers**
+- **Action:** Modify ETag configuration to prevent information disclosure
 - **Effort:** Low
+- **Configuration:** `FileETag MTime Size` or `FileETag None`
+- **Timeline:** 1 day
+
+#### 6. **Network Segmentation Review**
+- **Action:** Review MySQL external accessibility (port 3306)
+- **Effort:** Low-Medium
+- **Steps:** Configure firewall to restrict database access to application servers only
+- **Timeline:** 3-5 days
+
+### Long-term Recommendations
+
+#### 7. **Web Application Firewall (WAF)**
+- **Action:** Deploy WAF solution
+- **Effort:** High
+- **Benefits:** SQL injection protection, attack pattern detection
+- **Timeline:** 2-4 weeks
+
+#### 8. **Regular Security Scanning**
+- **Action:** Implement automated vulnerability scanning
+- **Effort:** Medium
+- **Tools:** OWASP ZAP, Nessus, or similar
 - **Timeline:** 2 weeks
-- **Recommendations:**
-  - Disable root login
-  - Implement key-based authentication
-  - Configure fail2ban
-  - Change default port if feasible
+
+#### 9. **Security Awareness Training**
+- **Action:** Developer security training focusing on OWASP Top 10
+- **Effort:** Medium
+- **Timeline:** Ongoing
 
 ---
 
 ## 5. CONCLUSION
 
 ### Overall Security Posture Assessment
-The target system presents a **CRITICAL** security risk that requires immediate attention. The combination of SQL injection vulnerability, exposed database service, and outdated software creates a perfect storm for system compromise.
+The assessment reveals **significant security deficiencies** that require immediate attention. While the primary target (172.22.65.70) was inaccessible during testing, the reference systems demonstrate common but serious vulnerabilities typical of web applications lacking proper security controls.
 
-### Immediate Priority Vulnerabilities
-1. **SQL Injection** - Must be fixed within 24-48 hours
-2. **MySQL External Access** - Should be disabled immediately
-3. **Outdated Apache Server** - Update within one week
+### Critical Priority Actions (Next 72 Hours)
+1. **Immediately patch the SQL injection vulnerability** - This represents the highest risk
+2. **Implement basic security headers** - Quick win with significant security improvement
+3. **Plan Apache server updates** - Address known vulnerability exposure
 
-### Long-term Security Recommendations
+### Medium Priority Actions (Next 2 Weeks)
+1. Update Apache web server to latest version
+2. Review and restrict database access
+3. Disable directory indexing on sensitive directories
+4. Implement proper error handling and logging
 
-#### Infrastructure Security
-- Implement network segmentation
-- Deploy Web Application Firewall (WAF)
-- Establish automated patch management
-- Configure comprehensive logging and monitoring
+### Long-term Strategic Recommendations
+1. **Adopt Secure Development Lifecycle (SDL)** practices
+2. **Implement regular penetration testing** (quarterly recommended)
+3. **Deploy comprehensive monitoring** and incident response capabilities
+4. **Establish vulnerability management program** with regular patching cycles
 
-#### Application Security
-- Conduct regular security code reviews
-- Implement secure coding practices
-- Perform periodic penetration testing
-- Establish vulnerability management program
+### Risk Mitigation Timeline
+- **Week 1:** Address critical SQL injection and implement security headers
+- **Week 2-4:** Server updates and network segmentation review
+- **Month 2-3:** Deploy WAF and establish ongoing security processes
 
-#### Operational Security
-- Create incident response procedures
-- Implement security awareness training
-- Establish change management processes
-- Regular security assessments and audits
-
-### Risk Acceptance
-**RECOMMENDATION:** Do not accept current risk levels. The critical SQL injection vulnerability poses an unacceptable risk of data breach and should be remediated immediately before the system continues operation in a production environment.
+The organization should prioritize the critical and high-severity findings to significantly improve their security posture. The SQL injection vulnerability poses an immediate and severe risk that could result in complete system compromise if exploited.
 
 ---
 
-**Report Classification:** CONFIDENTIAL  
-**Next Assessment:** Recommended within 30 days post-remediation
+**Report Prepared By:** Security Assessment Team  
+**Next Assessment Recommended:** 90 days post-remediation
